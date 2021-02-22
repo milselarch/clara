@@ -30,6 +30,9 @@ from clara.repair import Repair
 
 VERBOSE=0
 
+input('IS THIS BEING USED')
+
+
 class Clara(object):
 
     USAGE = '''
@@ -74,7 +77,7 @@ Options are:
 '''
 
     def __init__(self):
-        pass
+        self.models = []
 
     def usage(self):
         '''
@@ -302,36 +305,54 @@ Options are:
         else:
             print('No repair!')
 
-    def feedback(self):
-
+    def feedback(self, sources=None, source_is_file=True):
         if len(self.models) < 2:
             self.error('Feedback requires at least two programs!')
 
-        F = FeedGen(verbose=self.verbose, timeout=self.timeout,
-                    poolsize=self.poolsize, allowsuboptimal=self.suboptimal,
-                    feedmod=self.feedtype)
+        F = FeedGen(
+            verbose=self.verbose, timeout=self.timeout,
+            poolsize=self.poolsize, allowsuboptimal=self.suboptimal,
+            feedmod=self.feedtype
+        )
 
-        impl = self.models[-1]
-        specs = self.models[:-1]
+        if sources is None:
+            models = self.models
+        else:
+            models = self.process_sources(
+                save=False, is_file=source_is_file,
+                sources=sources
+            )
+
+        impl = models[-1]
+        specs = models[:-1]
 
         feed = F.generate(
             impl, specs, self.inter, ins=self.ins, args=self.args,
             ignoreio=self.ignoreio, ignoreret=self.ignoreret,
             cleanstrings=self.cleanstrings,
-            entryfnc=self.entryfnc)
+            entryfnc=self.entryfnc
+        )
 
         if feed.status == Feedback.STATUS_REPAIRED:
-            if self.maxfeedcost > 0 and feed.cost > self.maxfeedcost:
-                self.error('max cost exceeded (%d > %d)',
-                           feed.cost, self.maxfeedcost)
+            if feed.cost > self.maxfeedcost > 0:
+                self.error(
+                    'max cost exceeded (%d > %d)',
+                    feed.cost, self.maxfeedcost
+                )
             for f in feed.feedback:
                 print('*', f)
-                
+
         elif feed.status == Feedback.STATUS_ERROR:
             self.error(feed.error)
 
         else:
             self.error(feed.statusstr())
+
+        return feed
+
+    def cost(self, *args, **kwargs):
+        feedback = self.feedback(*args, **kwargs)
+        raise NotImplementedError
 
     def guess_lang(self):
         '''
@@ -416,33 +437,49 @@ Options are:
 
             rex[loc][var].append(expr)
 
-    def process_source(self, src):
+    def process_source(self, src, is_file=True):
         '''
         Reads and parses a single source file `src` and stets model fields.
         '''
 
         self.debug("Reading and parsing source file '%s'", src)
-            
-        with open(src, 'r', encoding="utf-8") as f:
-            code = f.read()
-            
+
+        if is_file:
+            with open(src, 'r', encoding="utf-8") as f:
+                code = f.read()
+        else:
+            code = src
+
         model = self.parser.parse_code(code)
         model.name = src
         self.extract_exprs(model)
-
         return model
-            
-    def process_sources(self):
-        '''
+
+    def process_sources(
+        self, save=True, sources=None,
+        is_file=True
+    ):
+        """
+        assign -> set self.models to models
+        sources -> code sources to generate models from
+        is_file -> whether sources are filenames or code
         Reads and parses source files (sets models field).
-        '''
+        """
 
-        self.models = []
+        models = []
 
-        for src in self.sources:
-            model = self.process_source(src)
-            self.models.append(model)
-                
+        if sources is None:
+            sources = self.sources
+
+        for src in sources:
+            model = self.process_source(src, is_file=is_file)
+            models.append(model)
+
+        if save:
+            self.models = models
+
+        return models
+
 
 if __name__ == '__main__':
     try:

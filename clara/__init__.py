@@ -2,6 +2,13 @@
 imports of all (required) sub-modules
 '''
 
+# from pathlib import Path
+# print('Running' if __name__ == '__main__' else 'Importing', Path(__file__).resolve())
+
+import sys
+sys.path.append(__package__)
+print('PACKAGE', __package__)
+
 from . import common
 
 from . import model

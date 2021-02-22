@@ -183,13 +183,16 @@ class Repair(object):
         self.V1 = (f1.getvars() | SPECIAL_VARS | set(['-'])) - self.vignore
         self.V2 = (f2.getvars() | SPECIAL_VARS | set(['*'])) - self.vignore
         self.getexprs(f1, f2)
+
         for loc1 in f1.locs():
             loc2 = self.sm[f1.name][loc1]
             P[loc1] = {}
+
             for var1 in self.V1 | set(['-']):
                 self.debug('Generating P for %s-%s', loc1, var1)
                 tptime = time.time()
                 P[loc1][var1] = list(self.potential(f1, f2, loc1, var1, loc2))
+
                 if self.verbose:
                     assert var1 == '-' or len(P[loc1][var1]) > 0, \
                         '%s,%s' % (loc1, var1)

@@ -1,7 +1,9 @@
 import pytest
+import sys
 
 from utils import get_full_data_filename, parse_file
 
+# from . import clara
 from clara.interpreter import getlanginter
 from clara.matching import Matching
 from clara.parser import getlangparser
@@ -63,4 +65,10 @@ def test_examples():
                          datadir="../examples", entryfnc="computeDeriv")
     matching_test_helper('c2.py', 'c3.py', 'py', False, args=args,
                          datadir="../examples", entryfnc="computeDeriv")
+
+    print('test examples done')
     
+
+print('not main?', __name__)
+if __name__ == '__main__':
+    test_examples()
